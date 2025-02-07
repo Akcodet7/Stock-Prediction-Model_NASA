@@ -1,6 +1,6 @@
-# Stock Price Prediction with Stacked LSTM
+# Stock Price Prediction with Stacked LSTM & Sentiment Analysis
 
-A deep learning project that leverages a Stacked LSTM model to predict future stock prices based on historical closing data. The model is built using TensorFlow and Keras, processing data retrieved via yfinance to forecast future trends.
+This project combines a Stacked LSTM model for stock price prediction with sentiment analysis of stock-related news. The model downloads historical stock data using yfinance, preprocesses the data for a deep learning LSTM model, and forecasts future stock prices. In addition, it fetches news via RSS feeds and performs sentiment analysis using TextBlob to help gauge market sentiment.
 
 ## Contributors
 
@@ -11,66 +11,78 @@ A deep learning project that leverages a Stacked LSTM model to predict future st
 
 ## Features
 
-- **Historical Data Retrieval:** Downloads stock data (e.g., AAPL) using yfinance.
-- **Data Preprocessing:** Extracts closing prices, scales data, and converts it into a time series format.
-- **Stacked LSTM Model:** Implements a multi-layer LSTM network to capture temporal dependencies.
-- **Performance Evaluation:** Computes RMSE for both training and testing datasets.
-- **Future Forecasting:** Predicts the next 30 days of stock prices and visualizes both historical and forecasted data.
+- **Historical Stock Data:** Retrieves stock data from Yahoo Finance.
+- **Data Preprocessing:** Scales data and transforms it into time series format suitable for LSTM.
+- **Stacked LSTM Model:** Uses two LSTM layers and a Dense output layer for prediction.
+- **Model Evaluation:** Calculates RMSE on both training and test sets; includes a custom judging score.
+- **Future Forecasting:** Predicts the next 30 days of stock prices.
+- **News & Sentiment Analysis:**  
+  - Fetches stock-related news via RSS feeds.
+  - Analyzes headlines using TextBlob to classify sentiment as positive, negative, or neutral.
+  - Saves the sentiment analysis results to a CSV file and plots the sentiment distribution.
 
 ## Abstract
 
-This project utilizes a Stacked LSTM network to predict stock prices by analyzing historical closing price data. By preprocessing the data into a time series format and training the model on 65% of the available data, the approach demonstrates promising results in forecasting future trends. Although predictions are based solely on past prices, the model shows considerable accuracy, suggesting that incorporating additional factors (e.g., market sentiment) could further enhance its performance.
+This project leverages deep learning and natural language processing to predict stock prices and understand market sentiment. By combining a Stacked LSTM network trained on historical closing price data with sentiment analysis of news headlines, the model provides insights that may help in decision-making for stock investments. Although predictions are based on historical data, the integration of sentiment analysis adds an extra dimension to the forecasting process.
 
 ## Introduction
 
-Stock market forecasting is challenging due to inherent volatility and multiple influencing factors. This project uses historical closing prices as the primary input for a deep learning model based on a Stacked LSTM architecture. The model is designed to learn long-term dependencies in the data, providing a foundation for making informed predictions about future stock trends.
+Stock market forecasting is a challenging task due to market volatility and a multitude of influencing factors. In this project, we use historical closing prices and recent news sentiment as inputs. The Stacked LSTM model learns long-term dependencies in the data, while sentiment analysis provides an understanding of market mood that might affect stock movements.
 
 ## Objective
 
-- **Primary Goal:** Develop and evaluate a Stacked LSTM model that accepts historical stock closing prices as input to predict future prices.
-- **Secondary Goals:**
-  - Retrieve and preprocess data from Yahoo Finance.
-  - Create a time series dataset for training and testing.
-  - Evaluate model performance using metrics like RMSE.
-  - Forecast stock prices for a future period (e.g., next 30 days).
+- **Primary:** Develop a Stacked LSTM model that predicts future stock prices from historical data.
+- **Secondary:** Integrate sentiment analysis of stock news to complement the prediction model.
 
 ## Methodology
 
-1. **Data Collection:**  
-   - Historical stock data is obtained from Yahoo Finance using the yfinance library.
-   - Example: Downloading AAPL stock data from January 1, 2015, to May 22, 2024.
+1. **News Fetching & Sentiment Analysis:**  
+   - Fetches news headlines via RSS feeds from Yahoo Finance and Seeking Alpha.
+   - Analyzes headlines with TextBlob to determine sentiment polarity.
+   - Saves the sentiment results to a CSV file for further analysis and visualization.
 
-2. **Data Preprocessing:**  
-   - Extract the closing price from the dataset.
-   - Scale the data using MinMaxScaler.
-   - Split the dataset into training (65%) and testing (35%) subsets.
-   - Transform the linear data into time series format using a fixed time step.
+2. **Stock Data Processing:**  
+   - Downloads historical stock data using yfinance.
+   - Preprocesses data (scaling, time series creation, train-test split).
 
-3. **Model Building:**  
-   - Construct a Stacked LSTM model with two LSTM layers (the first layer configured with `return_sequences=True`) followed by a Dense layer.
-   - Compile the model using the Adam optimizer and mean squared error loss function.
+3. **Model Building & Training:**  
+   - Constructs a Stacked LSTM model with two LSTM layers and one Dense layer.
+   - Trains the model on the training data and validates on the test data.
+   - Evaluates performance using RMSE and a custom judging score.
 
-4. **Training & Evaluation:**  
-   - Train the model for 100 epochs with a batch size of 64.
-   - Evaluate the model using the Root Mean Squared Error (RMSE) on both training and testing datasets.
-   - Visualize predictions against actual stock prices.
+4. **Forecasting & Visualization:**  
+   - Forecasts stock prices for the next 30 days.
+   - Plots the training/test predictions alongside actual stock prices.
+   - Displays sentiment distribution from the analyzed news headlines.
 
-5. **Future Forecasting:**  
-   - Forecast the next 30 days of stock prices.
-   - Inverse transform predictions to obtain actual stock prices.
-   - Plot historical data alongside future predictions.
+## Result Analysis
+
+- **Model Accuracy:**  
+  The model computes the Root Mean Squared Error (RMSE) for both training and testing datasets. A lower RMSE indicates that the predictions closely match the actual stock prices.
+  
+- **Judging Score:**  
+  A custom judging score is calculated using the percentage return and variance of the predictions. This score provides an additional perspective on the model's performance by assessing how well the model captures price movement dynamics.
+  
+- **Visual Insights:**  
+  The plotted graphs display:
+  - The actual vs. predicted stock prices, highlighting how well the model fits historical data.
+  - The training and validation loss trends during model training, demonstrating the convergence of the learning process.
+  - Future stock price forecasts over the next 30 days.
+  
+- **Sentiment Analysis:**  
+  The sentiment distribution, visualized via a pie chart, shows the proportions of positive, negative, and neutral news headlines. This information may serve as an additional indicator of market mood and can be used to supplement the technical predictions.
 
 ## Tools Used
 
 - **Programming Language:** Python
-- **Data Collection & Processing:**  
-  - [yfinance](https://pypi.org/project/yfinance/) – Retrieve historical stock data.
-  - numpy, pandas – Numerical computations and data manipulation.
-  - scikit-learn – Data scaling and evaluation.
-- **Modeling & Visualization:**  
-  - TensorFlow, Keras – Building and training the LSTM model.
-  - matplotlib, seaborn – Data visualization.
-    
+- **Libraries:**  
+  - Data Manipulation: numpy, pandas  
+  - Visualization: matplotlib, seaborn  
+  - Machine Learning: scikit-learn, TensorFlow, Keras  
+  - Data Retrieval: yfinance  
+  - News Parsing: feedparser  
+  - Sentiment Analysis: TextBlob
+
 ## Installation
 
 1. **Clone the Repository:**
@@ -110,3 +122,4 @@ Stock market forecasting is challenging due to inherent volatility and multiple 
 - [Understanding LSTMs](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
 - [Time series forecasting](https://towardsdatascience.com/)
 - [Time series prediction using deep learning](https://machinelearningmastery.com/)
+- [TextBlob Documentation](https://textblob.readthedocs.io/en/dev/)
