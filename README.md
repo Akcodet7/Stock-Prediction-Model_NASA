@@ -4,10 +4,10 @@ This project combines a Stacked LSTM model for stock price prediction with senti
 
 ## Contributors
 
-- Navdeep 
-- Abhishek Kumar
-- Aayush Kumar
-- Ashkrit Rai
+- [Navdeep](https://github.com/NavdeepKakrod)
+- [Abhishek Kumar](https://github.com/Akabhi2311)
+- [Aayush Kumar](https://github.com/Akcodet7)
+- [Ashkrit Rai](https://github.com/Askme007)
 
 ## Features
 
@@ -101,12 +101,6 @@ Stock market forecasting is a challenging task due to market volatility and a mu
 
      ```bash
      python Stock_Prediction.py
-
-## Result Analysis
-
-- The model achieves competitive RMSE values on both training and testing datasets.
-- Visualization plots indicate a close match between predicted and actual stock prices.
-- The 30-day future forecast demonstrates the model’s ability to capture stock trends, though accuracy could be improved with additional features such as sentiment analysis.
 
 ## Future Scope
 
