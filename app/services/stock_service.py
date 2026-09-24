@@ -59,19 +59,24 @@ class StockService:
 
         return df
 
-    def _cache_to_db(self, df: pd.DataFrame, symbol: str, db: Session, limit: int = 50):
+    def _cache_to_db(self, df: pd.DataFrame, symbol: str, db: Session, limit: int = 30):
         """
-        Saves recent stock price records to the database without duplicates.
+        Saves recent stock price records to the database without duplicates using bulk lookup.
         """
         recent = df.tail(limit)
+        dates = [idx.strftime("%Y-%m-%d") for idx in recent.index]
+        
+        # Single query to check all dates at once
+        existing_dates = set(
+            r[0] for r in db.query(StockPriceRecord.date).filter(
+                StockPriceRecord.symbol == symbol,
+                StockPriceRecord.date.in_(dates)
+            ).all()
+        )
+
         for idx, row in recent.iterrows():
             date_str = idx.strftime("%Y-%m-%d")
-            exists = db.query(StockPriceRecord).filter(
-                StockPriceRecord.symbol == symbol,
-                StockPriceRecord.date == date_str
-            ).first()
-
-            if not exists:
+            if date_str not in existing_dates:
                 rec = StockPriceRecord(
                     symbol=symbol,
                     date=date_str,

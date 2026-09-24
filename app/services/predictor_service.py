@@ -16,6 +16,9 @@ from app.db.models import PredictionRun
 
 logger = logging.getLogger(__name__)
 
+# Enforce single-thread execution to prevent CPU throttling on cloud instances
+torch.set_num_threads(1)
+
 # Device configuration (CUDA GPU if available, else CPU)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -75,8 +78,10 @@ class PredictorService:
         5. Generate 30-day forward forecast.
         6. Persist execution results to Supabase/SQLite.
         """
-        # 1. Download stock prices
-        df = stock_service.get_stock_data(symbol, start_date="2018-01-01", db=db)
+        # 1. Download stock prices (focus on recent 400 trading days for fast, high-relevance forecasting)
+        df = stock_service.get_stock_data(symbol, start_date="2022-01-01", db=db)
+        if len(df) > 400:
+            df = df.tail(400)
         prices = df["close"].values.astype(np.float32).reshape(-1, 1)
         dates = df.index
 

@@ -38,31 +38,36 @@ class SentimentService:
         except Exception as e:
             logger.warning(f"yfinance news fetch failed for {symbol}: {e}")
 
+        import requests
+
         # 2. Secondary source: RSS Feeds (Seeking Alpha & Yahoo RSS & Google News RSS)
         rss_feeds = [
             f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=US&lang=en-US",
             f"https://news.google.com/rss/search?q={clean_symbol}+stock+market&hl=en-US&gl=US&ceid=US:en"
         ]
 
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
         for feed_url in rss_feeds:
             try:
-                feed = feedparser.parse(feed_url)
-                for entry in feed.entries[:10]:
-                    title = entry.get("title", "")
-                    if title and not any(item["title"] == title for item in news_items):
-                        pub_date = None
-                        if "published" in entry:
-                            try:
-                                pub_date = pd.to_datetime(entry.published).strftime("%Y-%m-%d")
-                            except Exception:
-                                pub_date = datetime.utcnow().strftime("%Y-%m-%d")
-                        news_items.append({
-                            "title": title,
-                            "date": pub_date,
-                            "source": "RSS Feed"
-                        })
+                resp = requests.get(feed_url, headers=headers, timeout=2.5)
+                if resp.status_code == 200:
+                    feed = feedparser.parse(resp.content)
+                    for entry in feed.entries[:8]:
+                        title = entry.get("title", "")
+                        if title and not any(item["title"] == title for item in news_items):
+                            pub_date = None
+                            if "published" in entry:
+                                try:
+                                    pub_date = pd.to_datetime(entry.published).strftime("%Y-%m-%d")
+                                except Exception:
+                                    pub_date = datetime.utcnow().strftime("%Y-%m-%d")
+                            news_items.append({
+                                "title": title,
+                                "date": pub_date,
+                                "source": "RSS Feed"
+                            })
             except Exception as e:
-                logger.warning(f"RSS fetch failed for {feed_url}: {e}")
+                logger.warning(f"RSS fetch timeout or error for {feed_url}: {e}")
 
         # Fallback if no articles retrieved (e.g. offline or unknown ticker)
         if not news_items:
