@@ -2,12 +2,12 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C.svg)](https://pytorch.org/)
+[![NumPy](https://img.shields.io/badge/Engine-Zero--Allocation%20LSTM%20(NumPy)-013243.svg)](https://numpy.org/)
 [![PostgreSQL](https://img.shields.io/badge/Database-Supabase%20PostgreSQL-3ECF8E.svg)](https://supabase.com/)
 [![Tests](https://img.shields.io/badge/Tests-12%2F12%20Passed-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-green.svg)]()
 
-A production-ready financial engineering platform combining **Deep Learning (Multivariate Stacked LSTM)** with **Natural Language Processing (TextBlob Sentiment Analysis)**, backed by **Supabase PostgreSQL** and served via **FastAPI** with interactive Swagger documentation.
+A production-ready financial engineering platform combining **Zero-Allocation Multivariate LSTM Recurrent Forecasting** with **Natural Language Processing (TextBlob Sentiment Analysis)**, backed by **Supabase PostgreSQL** and served via **FastAPI** with interactive Swagger documentation.
 
 ---
 
@@ -31,7 +31,7 @@ flowchart TD
     subgraph Service Layer (Business Logic)
         StockSvc["Stock Service (yfinance data pipeline)"]
         SentSvc["Sentiment Service (RSS / TextBlob Polarity)"]
-        PredictSvc["Predictor Service (Multivariate LSTM in PyTorch)"]
+        PredictSvc["Predictor Service (Zero-Allocation Multivariate LSTM)"]
         MetricSvc["Metrics Service (Sharpe Ratio & Directional Accuracy)"]
     end
 
@@ -88,7 +88,7 @@ Stock-Prediction-Model_NASA/
 │       ├── stock_service.py      # Yahoo Finance fetcher & DB price cache
 │       ├── sentiment_service.py  # RSS feedparser & TextBlob sentiment pipeline
 │       ├── metrics_service.py    # Directional Accuracy & Sharpe Ratio calculations
-│       └── predictor_service.py  # PyTorch Multivariate LSTM train & forecast loop
+│       └── predictor_service.py  # High-performance Multivariate LSTM engine (<35MB RAM)
 ├── tests/
 │   ├── test_api.py               # FastAPI TestClient endpoint integration tests
 │   ├── test_metrics.py           # Quantitative metrics unit tests
