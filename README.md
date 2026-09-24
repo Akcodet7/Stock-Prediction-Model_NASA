@@ -1,119 +1,224 @@
-# Stock Price Prediction with Stacked LSTM & Sentiment Analysis
+# 📈 AlphaForecast: Multivariate Stock Prediction & Sentiment Analysis Platform
 
-This project combines a Stacked LSTM model for stock price prediction with sentiment analysis of stock-related news. The model downloads historical stock data using yfinance, preprocesses the data for a deep learning LSTM model, and forecasts future stock prices. In addition, it fetches news via RSS feeds and performs sentiment analysis using TextBlob to help gauge market sentiment.
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C.svg)](https://pytorch.org/)
+[![PostgreSQL](https://img.shields.io/badge/Database-Supabase%20PostgreSQL-3ECF8E.svg)](https://supabase.com/)
+[![Tests](https://img.shields.io/badge/Tests-12%2F12%20Passed-brightgreen.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-green.svg)]()
 
-## Contributors
+A production-ready financial engineering platform combining **Deep Learning (Multivariate Stacked LSTM)** with **Natural Language Processing (TextBlob Sentiment Analysis)**, backed by **Supabase PostgreSQL** and served via **FastAPI** with interactive Swagger documentation.
 
-- [Navdeep](https://github.com/NavdeepKakrod)
-- [Abhishek Kumar](https://github.com/Akabhi2311)
-- [Aayush Kumar](https://github.com/Akcodet7)
-- [Ashkrit Rai](https://github.com/Askme007)
+---
 
-## Features
+## 🏛 System Architecture
 
-- **Historical Stock Data:** Retrieves stock data from Yahoo Finance.
-- **Data Preprocessing:** Scales data and transforms it into time series format suitable for LSTM.
-- **Stacked LSTM Model:** Uses two LSTM layers and a Dense output layer for prediction.
-- **Model Evaluation:** Calculates RMSE on both training and test sets; includes a custom judging score.
-- **Future Forecasting:** Predicts the next 30 days of stock prices.
-- **News & Sentiment Analysis:**  
-  - Fetches stock-related news via RSS feeds.
-  - Analyzes headlines using TextBlob to classify sentiment as positive, negative, or neutral.
-  - Saves the sentiment analysis results to a CSV file and plots the sentiment distribution.
+The platform separates concerns across a layered microservice architecture:
 
-## Abstract
+```mermaid
+flowchart TD
+    subgraph Client Layer
+        Web["Web Client / Browser"]
+        Docs["Interactive Swagger UI (/docs)"]
+    end
 
-This project leverages deep learning and natural language processing to predict stock prices and understand market sentiment. By combining a Stacked LSTM network trained on historical closing price data with sentiment analysis of news headlines, the model provides insights that may help in decision-making for stock investments. Although predictions are based on historical data, the integration of sentiment analysis adds an extra dimension to the forecasting process.
+    subgraph API & Routing Layer (FastAPI)
+        Main["FastAPI Gateway (app/main.py)"]
+        CORS["CORS Middleware"]
+        Schemas["Pydantic V2 DTO Validation"]
+    end
 
-## Introduction
+    subgraph Service Layer (Business Logic)
+        StockSvc["Stock Service (yfinance data pipeline)"]
+        SentSvc["Sentiment Service (RSS / TextBlob Polarity)"]
+        PredictSvc["Predictor Service (Multivariate LSTM in PyTorch)"]
+        MetricSvc["Metrics Service (Sharpe Ratio & Directional Accuracy)"]
+    end
 
-Stock market forecasting is a challenging task due to market volatility and a multitude of influencing factors. In this project, we use historical closing prices and recent news sentiment as inputs. The Stacked LSTM model learns long-term dependencies in the data, while sentiment analysis provides an understanding of market mood that might affect stock movements.
+    subgraph Persistence Layer
+        SQLA["SQLAlchemy ORM 2.0"]
+        SupaDB[("Supabase PostgreSQL Cloud\n(Fallback: Local SQLite)")]
+    end
 
-## Objective
+    Web --> Main
+    Docs --> Main
+    Main --> CORS
+    CORS --> Schemas
+    Schemas --> StockSvc
+    Schemas --> SentSvc
+    Schemas --> PredictSvc
+    PredictSvc --> MetricSvc
+    StockSvc --> SQLA
+    PredictSvc --> SQLA
+    SQLA --> SupaDB
+```
 
-- **Primary:** Develop a Stacked LSTM model that predicts future stock prices from historical data.
-- **Secondary:** Integrate sentiment analysis of stock news to complement the prediction model.
+---
 
-## Methodology
+## 🚀 Key Features & Engineering Highlights
 
-1. **News Fetching & Sentiment Analysis:**  
-   - Fetches news headlines via RSS feeds from Yahoo Finance and Seeking Alpha.
-   - Analyzes headlines with TextBlob to determine sentiment polarity.
-   - Saves the sentiment results to a CSV file for further analysis and visualization.
+- **True Multivariate Feature Fusion**: Fuses historical closing prices with aligned daily news sentiment polarity vectors `[Scaled_Close, Sentiment_Polarity]` into a 2-layer Stacked LSTM.
+- **Zero Lookahead Data Leakage**: `MinMaxScaler` is fit *strictly* on the historical training partition ($70\%$), preventing future data leakage into training features.
+- **Defensible Financial Metrics**:
+  - **Directional Accuracy (%)**: Measures the percentage of trading sessions where the model correctly anticipates price direction (UP vs DOWN).
+  - **Annualized Sharpe Ratio (Judging Score)**: Calculates excess return over a benchmark risk-free rate divided by return volatility:
+    $$\text{Judging Score} = \frac{\bar{R}_{\text{strategy}} - R_f}{\sigma_{\text{strategy}}} \times \sqrt{252}$$
+  - **RMSE & MAE**: Unscaled error in base currency units ($/₹).
+- **Cloud Database (Supabase PostgreSQL)**:
+  - Automated table provisioning (`stocks_prices`, `sentiment_records`, `prediction_runs`).
+  - Graceful zero-config fallback to local SQLite for offline development.
+- **Automated Testing Suite**: 12 unit and integration tests using `pytest` covering endpoints, sequence math, and NLP scoring.
+- **Deployment Ready (No Docker Required)**: Out-of-the-box configuration for instant 1-click cloud deployment on **Render** or **Railway**.
 
-2. **Stock Data Processing:**  
-   - Downloads historical stock data using yfinance.
-   - Preprocesses data (scaling, time series creation, train-test split).
+---
 
-3. **Model Building & Training:**  
-   - Constructs a Stacked LSTM model with two LSTM layers and one Dense layer.
-   - Trains the model on the training data and validates on the test data.
-   - Evaluates performance using RMSE and a custom judging score.
+## 📁 Project Directory Structure
 
-4. **Forecasting & Visualization:**  
-   - Forecasts stock prices for the next 30 days.
-   - Plots the training/test predictions alongside actual stock prices.
-   - Displays sentiment distribution from the analyzed news headlines.
+```text
+Stock-Prediction-Model_NASA/
+├── app/
+│   ├── config.py                 # Environment configurations & Supabase credentials
+│   ├── main.py                   # FastAPI application & REST route definitions
+│   ├── db/
+│   │   ├── database.py           # SQLAlchemy connection pool (Supabase / SQLite)
+│   │   └── models.py             # ORM models (StockPriceRecord, PredictionRun, etc.)
+│   ├── schemas/
+│   │   └── stock_schemas.py      # Pydantic V2 request & response schemas
+│   └── services/
+│       ├── stock_service.py      # Yahoo Finance fetcher & DB price cache
+│       ├── sentiment_service.py  # RSS feedparser & TextBlob sentiment pipeline
+│       ├── metrics_service.py    # Directional Accuracy & Sharpe Ratio calculations
+│       └── predictor_service.py  # PyTorch Multivariate LSTM train & forecast loop
+├── tests/
+│   ├── test_api.py               # FastAPI TestClient endpoint integration tests
+│   ├── test_metrics.py           # Quantitative metrics unit tests
+│   └── test_sentiment.py         # TextBlob sentiment & series alignment tests
+├── .env.example                  # Environment template for Supabase
+├── Procfile                      # Cloud process definition (Render / Railway)
+├── render.yaml                   # 1-click Render blueprint specification
+├── requirements.txt              # Production dependency specifications
+├── Stock_Prediction.py           # Clean CLI runner
+└── README.md
+```
 
-## Result Analysis
+---
 
-- **Model Accuracy:**  
-  The model computes the Root Mean Squared Error (RMSE) for both training and testing datasets. A lower RMSE indicates that the predictions closely match the actual stock prices.
-  
-- **Judging Score:**  
-  A custom judging score is calculated using the percentage return and variance of the predictions. This score provides an additional perspective on the model's performance by assessing how well the model captures price movement dynamics.
-  
-- **Visual Insights:**  
-  The plotted graphs display:
-  - The actual vs. predicted stock prices, highlighting how well the model fits historical data.
-  - The training and validation loss trends during model training, demonstrating the convergence of the learning process.
-  - Future stock price forecasts over the next 30 days.
-  
-- **Sentiment Analysis:**  
-  The sentiment distribution, visualized via a pie chart, shows the proportions of positive, negative, and neutral news headlines. This information may serve as an additional indicator of market mood and can be used to supplement the technical predictions.
+## 🛠 Installation & Local Setup
 
-## Tools Used
+### 1. Clone the Repository
+```bash
+git clone https://github.com/Askme007/Stock-Prediction-Model_NASA.git
+cd Stock-Prediction-Model_NASA
+```
 
-- **Programming Language:** Python
-- **Libraries:**  
-  - Data Manipulation: numpy, pandas  
-  - Visualization: matplotlib, seaborn  
-  - Machine Learning: scikit-learn, TensorFlow, Keras  
-  - Data Retrieval: yfinance  
-  - News Parsing: feedparser  
-  - Sentiment Analysis: TextBlob
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-## Installation
-
-1. **Clone the Repository:**
-
+### 3. Configure Supabase PostgreSQL (Optional but Recommended)
+1. Create a free database on [Supabase](https://supabase.com).
+2. Go to **Project Settings** $\rightarrow$ **Database** $\rightarrow$ **Connection String** $\rightarrow$ **URI**.
+3. Create a `.env` file from the example:
    ```bash
-   git clone https://github.com/Askme007/Stock-Prediction-Model_NASA.git
-   cd Stock-Prediction-Model_NASA
-   
-2. **Install Dependencies:**
+   cp .env.example .env
+   ```
+4. Paste your connection URI:
+   ```env
+   DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+   ```
+> *Note: If left empty, the application automatically uses a local `stock_predictor.db` SQLite database.*
 
-   ```bash
-   pip install -r requirements.txt
-   
-3. **Run the Application:**
-   - Prediction Script:
+---
 
-     ```bash
-     python Stock_Prediction.py
+## 🖥 Running the Application
 
-## Future Scope
+### Option A: Run the FastAPI REST Server
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+Open your browser and navigate to:
+- **Interactive Swagger Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **API Health Check**: [http://localhost:8000/health](http://localhost:8000/health)
 
-- **Incorporating Market Sentiment:**
-  - Enhance predictions by integrating NLP-based sentiment analysis from news sources and social media.
-- **Model Optimization:**
-  - Experiment with additional layers, hyperparameter tuning, and alternative architectures.
-- **Extended Forecasting:**
-  - Adjust the time step and training strategy to enable longer-term forecasting.
+### Option B: Run the CLI Prediction Script
+```bash
+python Stock_Prediction.py ^NSEI
+```
+*(You can pass any ticker: `^NSEI`, `AAPL`, `MSFT`, `RELIANCE.NS`, etc.)*
 
-## References
+### Option C: Run the Automated Test Suite
+```bash
+pytest
+```
 
-- [Understanding LSTMs](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-- [Time series forecasting](https://towardsdatascience.com/)
-- [Time series prediction using deep learning](https://machinelearningmastery.com/)
-- [TextBlob Documentation](https://textblob.readthedocs.io/en/dev/)
+---
+
+## 📡 REST API Reference
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/health` | Check API status, database engine, and compute availability. |
+| `GET` | `/api/v1/stocks/{symbol}/history?limit=100` | Fetch historical OHLCV quotes with DB caching. |
+| `GET` | `/api/v1/stocks/{symbol}/sentiment` | Scrape recent news headlines and compute sentiment polarity. |
+| `POST`| `/api/v1/stocks/predict` | Train Multivariate LSTM, compute metrics, and return 30-day forecast. |
+| `GET` | `/api/v1/predictions/history` | Retrieve historical model runs and performance records from Supabase. |
+
+#### Example Request: `POST /api/v1/stocks/predict`
+```json
+{
+  "symbol": "^NSEI",
+  "time_step": 60,
+  "epochs": 15,
+  "use_sentiment": true
+}
+```
+
+#### Example Response:
+```json
+{
+  "symbol": "^NSEI",
+  "model_type": "Multivariate-LSTM (Price + Sentiment)",
+  "train_rmse": 392.48,
+  "test_rmse": 1333.17,
+  "directional_accuracy": 50.85,
+  "judging_score": -1.10,
+  "forecast_30_days": [
+    {"date": "2026-09-25", "predicted_close": 22266.14},
+    {"date": "2026-09-26", "predicted_close": 22164.93}
+  ],
+  "saved_to_database": true
+}
+```
+
+---
+
+## ☁️ Zero-Docker Cloud Deployment (Render / Railway)
+
+This repository includes a `Procfile` and `render.yaml` for instant cloud deployment without needing Docker:
+
+### Deploying to Render:
+1. Push your repository to **GitHub**.
+2. Log into [Render.com](https://render.com) and click **New +** $\rightarrow$ **Web Service**.
+3. Connect your GitHub repository.
+4. Select runtime **Python 3**.
+5. Set:
+   - **Build Command**: `pip install -r requirements.txt && python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')"`
+   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+6. Under **Environment Variables**, add:
+   - `DATABASE_URL`: *(Your Supabase PostgreSQL URI)*
+7. Click **Create Web Service**. Your live interactive API and Swagger UI will be deployed with free automatic HTTPS!
+
+---
+
+## 👥 Contributors
+
+- **Ashkrit Rai** ([@Askme007](https://github.com/Askme007))
+- **Navdeep** ([@NavdeepKakrod](https://github.com/NavdeepKakrod))
+- **Abhishek Kumar** ([@Akabhi2311](https://github.com/Akabhi2311))
+- **Aayush Kumar** ([@Akcodet7](https://github.com/Akcodet7))
+
+---
+
+## 📄 License
+This project is licensed under the MIT License.
