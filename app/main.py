@@ -67,7 +67,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/", tags=["General"])
+@app.api_route("/", methods=["GET", "HEAD"], tags=["General"])
 def root():
     return {
         "name": settings.PROJECT_NAME,
@@ -76,7 +76,7 @@ def root():
         "health_check": "/health"
     }
 
-@app.get("/health", response_model=HealthResponse, tags=["General"])
+@app.api_route("/health", methods=["GET", "HEAD"], response_model=HealthResponse, tags=["General"])
 def health_check():
     """Checks the health of the API, Database connection, and ML compute engine."""
     db_type = "Supabase PostgreSQL" if "postgresql" in settings.DATABASE_URL else "Local SQLite"
