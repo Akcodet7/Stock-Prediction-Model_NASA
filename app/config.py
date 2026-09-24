@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings:
-    PROJECT_NAME: str = "Stock Price Prediction & Sentiment API"
+    PROJECT_NAME: str = "MarketPulse API"
     VERSION: str = "2.0.0"
     API_V1_PREFIX: str = "/api/v1"
     

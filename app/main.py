@@ -45,17 +45,14 @@ async def lifespan(app: FastAPI):
 
 # FastAPI Application Definition
 app = FastAPI(
-    title=settings.PROJECT_NAME,
+    title="MarketPulse – Financial Intelligence & Analytics Platform",
     version=settings.VERSION,
     lifespan=lifespan,
-    description="""
-    ## Stock Price Prediction & Sentiment Analysis API
-    Production-grade financial engineering backend combining:
-    - **Multivariate Stacked LSTM** (fusing historical closing price + news sentiment).
-    - **Live Sentiment Analysis** with TextBlob on RSS & Yahoo Finance news feeds.
-    - **Supabase PostgreSQL** cloud persistence for predictions and stock cache.
-    - **Financial Risk Metrics**: Directional Accuracy (%) and Annualized Sharpe Ratio Judging Score.
-    """
+    description="""Production-grade financial engineering backend service providing:
+* **Multivariate Time-Series Forecasting**: Fusing historical closing prices with live news sentiment.
+* **Real-Time Sentiment Analysis**: TextBlob polarity scoring on Yahoo Finance & RSS feeds.
+* **Cloud Database Persistence**: Supabase PostgreSQL persistence with SQLAlchemy ORM.
+* **Quantitative Risk Metrics**: Annualized Sharpe Ratio and Directional Hit Rate (%)."""
 )
 
 # CORS Middleware (allows web dashboards / Swagger UI access)
@@ -67,7 +64,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.api_route("/", methods=["GET", "HEAD"], tags=["General"])
+# Background HEAD routes for Render health check (hidden from Swagger UI)
+@app.api_route("/", methods=["HEAD"], include_in_schema=False)
+@app.api_route("/health", methods=["HEAD"], include_in_schema=False)
+def head_health():
+    return {"status": "ok"}
+
+@app.get("/", tags=["General"])
 def root():
     return {
         "name": settings.PROJECT_NAME,
@@ -76,7 +79,7 @@ def root():
         "health_check": "/health"
     }
 
-@app.api_route("/health", methods=["GET", "HEAD"], response_model=HealthResponse, tags=["General"])
+@app.get("/health", response_model=HealthResponse, tags=["General"])
 def health_check():
     """Checks the health of the API, Database connection, and ML compute engine."""
     db_type = "Supabase PostgreSQL" if "postgresql" in settings.DATABASE_URL else "Local SQLite"
