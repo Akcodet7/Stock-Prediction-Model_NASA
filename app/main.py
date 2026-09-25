@@ -45,14 +45,14 @@ async def lifespan(app: FastAPI):
 
 # FastAPI Application Definition
 app = FastAPI(
-    title="MarketPulse – Financial Intelligence & Analytics Platform",
+    title="MarketPulse – Stock Forecasting & Sentiment Analysis API",
     version=settings.VERSION,
     lifespan=lifespan,
-    description="""Production-grade financial engineering backend service providing:
-* **Multivariate Time-Series Forecasting**: Fusing historical closing prices with live news sentiment.
-* **Real-Time Sentiment Analysis**: TextBlob polarity scoring on Yahoo Finance & RSS feeds.
-* **Cloud Database Persistence**: Supabase PostgreSQL persistence with SQLAlchemy ORM.
-* **Quantitative Risk Metrics**: Annualized Sharpe Ratio and Directional Hit Rate (%)."""
+    description="""REST API backend providing:
+* **Multivariate Time-Series Forecasting**: Combining historical closing prices with news sentiment signals.
+* **Sentiment Analysis**: TextBlob polarity scoring on Yahoo Finance RSS feeds.
+* **Database Persistence**: Supabase PostgreSQL with SQLAlchemy ORM and local SQLite fallback.
+* **Evaluation Metrics**: Directional Hit Rate (%) and Annualized Sharpe Ratio."""
 )
 
 # CORS Middleware (allows web dashboards / Swagger UI access)

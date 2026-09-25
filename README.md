@@ -1,184 +1,139 @@
-# 📊 MarketPulse: Real-Time Financial Analytics & Multivariate Forecasting Engine
+# MarketPulse
+
+A Python REST API for stock price forecasting and news sentiment analysis, built with FastAPI, SQLAlchemy, and a lightweight multivariate LSTM engine.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com)
-[![NumPy](https://img.shields.io/badge/Engine-Zero--Allocation%20LSTM%20(NumPy)-013243.svg)](https://numpy.org/)
-[![PostgreSQL](https://img.shields.io/badge/Database-Supabase%20PostgreSQL-3ECF8E.svg)](https://supabase.com/)
+[![Database](https://img.shields.io/badge/Database-Supabase%20PostgreSQL-3ECF8E.svg)](https://supabase.com/)
 [![Tests](https://img.shields.io/badge/Tests-12%2F12%20Passed-brightgreen.svg)]()
-[![Cloud Deployment](https://img.shields.io/badge/Cloud-Render%20Live-46E3B7.svg)](https://marketpulse-api-eb4i.onrender.com/docs)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> **Production Deployment**: [https://marketpulse-api-eb4i.onrender.com/docs](https://marketpulse-api-eb4i.onrender.com/docs)  
-> Interactive OpenAPI / Swagger UI documentation deployed live with automated HTTPS.
+Live API Documentation: [https://marketpulse-api-eb4i.onrender.com/docs](https://marketpulse-api-eb4i.onrender.com/docs)
 
 ---
 
-## 📌 Executive Overview
+## Overview
 
-**MarketPulse** is an enterprise-grade financial analytics and algorithmic forecasting backend service. It fuses **multivariate market sequences (OHLCV prices)** with **real-time financial news sentiment signals** to generate 30-day autoregressive forward projections.
+MarketPulse is a backend web service designed to forecast short-term stock prices by combining two data streams:
+1. **Historical market data**: End-of-day OHLCV prices fetched via Yahoo Finance.
+2. **Market sentiment**: Recent financial news headlines scraped from Yahoo Finance RSS feeds and scored using TextBlob polarity analysis.
 
-The platform was architected to bridge the gap between academic data science prototypes and production software engineering:
-* **Zero-Allocation Recurrent Engine**: Custom-engineered, vectorized Multivariate Long Short-Term Memory (LSTM) network in pure NumPy, operating at **<35 MB peak RAM** (a **94.5% memory reduction** over monolithic deep-learning runtimes).
-* **High-Throughput Data Pipeline**: Resilient Yahoo Finance data extraction, sub-second RSS news scraping with timeout guards, and batch database caching.
-* **Cloud Database Persistence**: Cloud-native persistence using **Supabase PostgreSQL** via IPv4 connection pooling, paired with **SQLAlchemy 2.0 ORM** and automatic local SQLite fallback.
-* **Defensible Financial Metrics**: Evaluation via Directional Hit Rate (%) and Annualized Sharpe Ratio judging scores, with **strict mathematical separation between train and test splits** to eliminate lookahead data leakage.
-* **Exhaustive Automated Testing**: Complete test coverage via `pytest` testing endpoints, sequence mathematics, and NLP polarity scoring.
+The system processes these features through a multivariate Long Short-Term Memory (LSTM) network to produce a 30-day forecast, evaluates performance against directional accuracy and Sharpe ratio metrics, and logs results to a Supabase PostgreSQL database.
 
 ---
 
-## 🏛 System Architecture
+## Architecture
 
-The service adheres to clean layered architecture principles, ensuring strict separation of concerns between HTTP transport, domain validation, numerical computation, and database persistence:
+The project is structured into distinct layers separating API routing, business logic, and database operations:
 
 ```mermaid
 flowchart TD
-    subgraph Client Layer
-        Web["Web Dashboards / Traders"]
-        Docs["Interactive Swagger UI (/docs)"]
+    subgraph Client ["Client Layer"]
+        Browser["Browser / HTTP Client"]
+        Swagger["Swagger UI (/docs)"]
     end
 
-    subgraph API Gateway Layer (FastAPI)
-        Main["FastAPI Router (app/main.py)"]
-        CORS["CORS Middleware"]
-        Schemas["Pydantic V2 DTO Validation"]
+    subgraph Gateway ["API Gateway (FastAPI)"]
+        Router["Router (app/main.py)"]
+        Validation["Pydantic Validation (app/schemas)"]
     end
 
-    subgraph Domain & Service Layer
-        StockSvc["Stock Service\n(yfinance pipeline & batch cache)"]
-        SentSvc["Sentiment Service\n(Yahoo RSS + TextBlob NLP)"]
-        PredictSvc["Predictor Engine\n(Zero-Allocation NumPy LSTM)"]
-        MetricSvc["Risk Metrics Engine\n(Sharpe Ratio & Directional Hit Rate)"]
+    subgraph Services ["Service Layer"]
+        StockService["Stock Service (yfinance)"]
+        SentimentService["Sentiment Service (RSS + TextBlob)"]
+        PredictorService["Predictor Service (NumPy LSTM)"]
+        MetricsService["Metrics Service (Sharpe & Accuracy)"]
     end
 
-    subgraph Persistence Layer
-        SQLA["SQLAlchemy 2.0 ORM"]
-        Pooler["Supabase Session Pooler (IPv4:6543)"]
-        SupaDB[("Supabase PostgreSQL Cloud\n(Fallback: Local SQLite)")]
+    subgraph Persistence ["Persistence Layer"]
+        ORM["SQLAlchemy 2.0 ORM"]
+        Postgres[("Supabase PostgreSQL / SQLite Fallback")]
     end
 
-    Web --> Main
-    Docs --> Main
-    Main --> CORS
-    CORS --> Schemas
-    Schemas --> StockSvc
-    Schemas --> SentSvc
-    Schemas --> PredictSvc
-    PredictSvc --> MetricSvc
-    StockSvc --> SQLA
-    PredictSvc --> SQLA
-    SQLA --> Pooler
-    Pooler --> SupaDB
+    Browser --> Router
+    Swagger --> Router
+    Router --> Validation
+    Validation --> StockService
+    Validation --> SentimentService
+    Validation --> PredictorService
+    PredictorService --> MetricsService
+    StockService --> ORM
+    PredictorService --> ORM
+    ORM --> Postgres
 ```
 
 ---
 
-## ⚡ Cloud Micro-Instance Optimization & Engineering Challenges
+## Key Features
 
-Deploying machine-learning backends to cloud micro-instances (such as Render's free tier with **0.1 vCPU and 512 MB RAM**) presents critical systems constraints that typically cause container terminations. MarketPulse was specifically engineered to overcome these bottlenecks:
-
-### 1. Eliminating 512 MB RAM OOM (Out Of Memory) Crashes
-* **The Problem**: Standard deep learning frameworks (PyTorch, TensorFlow) allocate heavy BLAS/MKL shared-library buffers and Adam optimizer momentum states. Profiling revealed baseline imports consumed **443 MB**, spiking past **550–960 MB** during training and triggering Linux kernel `SIGKILL (OOM 137)` termination.
-* **The Solution**: We engineered a custom, vectorized **Multivariate LSTM in pure NumPy** (`NumpyMultivariateLSTM`) featuring 4-gate recurrent mechanics ($f_t, i_t, \tilde{C}_t, o_t$), Momentum SGD with Backpropagation Through Time (BPTT), and gradient clipping.
-* **Result**: Peak RAM dropped from **552 MB to 30.2 MB** (**94.5% memory reduction**), training completes in **~3.2 seconds**, and the monolithic 900 MB wheel was removed from dependencies—slashing deployment build times from 4 minutes to 25 seconds.
-
-### 2. Eliminating 100-Second Gateway Timeouts (HTTP 502)
-* **The Problem**: Synchronous news RSS scrapers lacked socket timeouts, hanging indefinitely on external rate limits. Additionally, historical price caching ran 50 sequential SQL queries in a loop over public internet connections to Supabase ($N+1$ query latency).
-* **The Solution**:
-  1. Wrapped RSS requests in `requests.get(..., timeout=2.5)` with instant fallback to neutral sentiment if external feeds degrade.
-  2. Replaced loop queries with a single batch `IN` query to check and insert missing dates in one round-trip.
-  3. Windowed historical training to the most recent 400 trading days (~1.5 years of market momentum).
-
-| Metric | Monolithic Framework (PyTorch) | Engineered Engine (NumPy LSTM) | Improvement |
-| :--- | :--- | :--- | :--- |
-| **Peak RAM Allocation** | 552 MB – 962 MB *(OOM Crash)* | **30.2 MB** | **94.5% reduction** |
-| **Cloud Sizing Feasibility** | Exceeds 512 MB Free Tier | Fits comfortably with **400+ MB headroom** | **100% stable** |
-| **Execution Latency** | Gateway Timeout (>100s) | **3.5 – 5.2 seconds** | **~25x faster** |
-| **Cloud Build Duration** | ~4 minutes (900MB wheel download) | **~25 seconds** | **90% build speedup** |
+- **Multivariate Sequence Input**: Combines scaled historical closing prices with aligned daily news sentiment polarity vectors `[Price, Sentiment]`.
+- **Lookahead Prevention**: The `MinMaxScaler` is fitted strictly on the training partition ($70\%$) to avoid data leakage into the evaluation partition ($30\%$).
+- **Performance Metrics**:
+  - **Directional Accuracy (%)**: Measures how often the model correctly predicts the sign of daily price changes (UP vs DOWN).
+  - **Annualized Sharpe Ratio**: Evaluates risk-adjusted returns relative to a risk-free benchmark ($5\%$ annual rate).
+  - **RMSE / MAE**: Calculated on unscaled currency values.
+- **Database Persistence**: Automatic table creation and caching using Supabase PostgreSQL (via connection pooler) with automatic fallback to local SQLite when running offline.
+- **Micro-Instance Optimization**: The recurrent forecasting model is implemented in NumPy with vectorized operations, reducing memory usage to under 35 MB RAM to operate reliably within cloud free-tier memory constraints (512 MB).
+- **Automated Testing**: 12 unit and integration tests using `pytest` covering endpoints, risk metrics, and sentiment logic.
 
 ---
 
-## 🚀 Key Features & Implementation Rigor
-
-### 1. True Multivariate Feature Fusion
-The model does not rely on price alone. It fuses daily normalized closing prices with aligned news sentiment polarity vectors:
-$$\mathbf{X}_t = \begin{bmatrix} \text{Scaled\_Close}_t \\ \text{Sentiment\_Polarity}_t \end{bmatrix}$$
-During 30-day autoregressive forward forecasting, sentiment scores decay smoothly toward neutral baseline ($0.95^{\text{day}}$), accurately reflecting market information half-life.
-
-### 2. Zero Lookahead Data Leakage
-Unlike naive implementations that normalize entire datasets prior to splitting, MarketPulse enforces strict temporal discipline:
-* The `MinMaxScaler` is fitted **strictly on the historical training partition** ($70\%$).
-* The test partition ($30\%$) is transformed using training distribution parameters.
-* Test sequences preserve the lookback window without leaking future target prices.
-
-### 3. Quantitative Financial Metrics
-* **Directional Hit Rate (%)**: Evaluates actual trade utility by calculating the percentage of sessions where predicted price direction matches market movement:
-  $$\text{Directional Accuracy} = \frac{1}{N-1} \sum_{t=1}^{N-1} \mathbb{I}\left(\operatorname{sgn}(\hat{y}_{t+1} - y_t) == \operatorname{sgn}(y_{t+1} - y_t)\right) \times 100\%$$
-* **Annualized Sharpe Ratio (Judging Score)**: Calculates risk-adjusted excess returns over an annualized risk-free rate ($5\%$):
-  $$\text{Sharpe Ratio} = \frac{\bar{R}_{\text{strategy}} - R_f}{\sigma_{\text{strategy}}} \times \sqrt{252}$$
-* **RMSE & MAE**: Unscaled error measures returned in native currency units ($ / ₹).
-
----
-
-## 📁 Project Directory Structure
+## Project Structure
 
 ```text
 MarketPulse/
 ├── app/
-│   ├── config.py                 # Pydantic Settings & DB URL normalization
-│   ├── main.py                   # FastAPI application, CORS, Swagger UI & lifecycle
+│   ├── config.py                 # Application settings and database URL handling
+│   ├── main.py                   # FastAPI routes, middleware, and lifecycle
 │   ├── db/
-│   │   ├── database.py           # SQLAlchemy 2.0 pool config (Supabase / SQLite)
-│   │   └── models.py             # ORM models (StockPriceRecord, PredictionRun, etc.)
+│   │   ├── database.py           # SQLAlchemy engine and session management
+│   │   └── models.py             # ORM models (prices, sentiment, prediction runs)
 │   ├── schemas/
-│   │   └── stock_schemas.py      # Pydantic V2 validation DTOs & response contracts
+│   │   └── stock_schemas.py      # Pydantic request and response schemas
 │   └── services/
-│       ├── stock_service.py      # Yahoo Finance fetcher & batch DB cache
-│       ├── sentiment_service.py  # RSS feedparser, timeout guards & TextBlob polarity
-│       ├── metrics_service.py    # Directional Hit Rate & Annualized Sharpe Ratio
-│       └── predictor_service.py  # Zero-Allocation Multivariate LSTM Engine (<35MB RAM)
+│       ├── stock_service.py      # Price fetching and batch database caching
+│       ├── sentiment_service.py  # RSS feed parsing and sentiment scoring
+│       ├── metrics_service.py    # Directional accuracy and Sharpe calculations
+│       └── predictor_service.py  # Lightweight Multivariate LSTM implementation
 ├── tests/
-│   ├── test_api.py               # FastAPI TestClient endpoint integration tests
-│   ├── test_metrics.py           # Quantitative metrics & financial math unit tests
-│   └── test_sentiment.py         # NLP scoring & temporal series alignment tests
+│   ├── test_api.py               # API endpoint integration tests
+│   ├── test_metrics.py           # Metrics calculation tests
+│   └── test_sentiment.py         # Sentiment analysis and alignment tests
 ├── .env.example                  # Environment configuration template
-├── Procfile                      # Cloud process worker specification
-├── render.yaml                   # 1-click cloud infrastructure blueprint
-├── requirements.txt              # Production dependency specifications
-├── Stock_Prediction.py           # Clean CLI terminal runner
-└── README.md                     # Comprehensive project documentation
+├── Procfile                      # Render / cloud process file
+├── render.yaml                   # Infrastructure configuration
+├── requirements.txt              # Project dependencies
+├── Stock_Prediction.py           # Standalone CLI prediction script
+└── README.md
 ```
 
 ---
 
-## 📡 REST API Reference
+## API Endpoints
 
-The interactive OpenAPI documentation is accessible at `/docs`.
+Interactive documentation is available at `/docs` (Swagger UI) and `/redoc`.
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/health` | Cloud health check verifying PostgreSQL database connectivity. |
-| `GET` | `/api/v1/stocks/{symbol}/history?limit=100` | Historical OHLCV market data with automated database caching. |
-| `GET` | `/api/v1/stocks/{symbol}/sentiment` | Live RSS headline extraction with TextBlob polarity scoring. |
-| `POST`| `/api/v1/stocks/predict` | Executes Multivariate LSTM training & 30-day forecast generation. |
-| `GET` | `/api/v1/predictions/history` | Historical prediction runs, risk metrics, and audit records from DB. |
+| `GET` | `/health` | Service health status and database connection check. |
+| `GET` | `/api/v1/stocks/{symbol}/history?limit=100` | Historical prices with database caching. |
+| `GET` | `/api/v1/stocks/{symbol}/sentiment` | Recent news headlines with polarity scores. |
+| `POST`| `/api/v1/stocks/predict` | Trains model and returns a 30-day forecast with evaluation metrics. |
+| `GET` | `/api/v1/predictions/history` | List of past prediction runs stored in the database. |
 
----
+### Example: POST /api/v1/stocks/predict
 
-### Request & Response Examples
-
-#### 1. Execute Multivariate Prediction: `POST /api/v1/stocks/predict`
-```bash
-curl -X 'POST' \
-  'https://marketpulse-api-eb4i.onrender.com/api/v1/stocks/predict' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "symbol": "^NSEI",
-    "time_step": 60,
-    "epochs": 15,
-    "use_sentiment": true
-  }'
+**Request:**
+```json
+{
+  "symbol": "^NSEI",
+  "time_step": 60,
+  "epochs": 15,
+  "use_sentiment": true
+}
 ```
 
+**Response:**
 ```json
 {
   "symbol": "^NSEI",
@@ -196,114 +151,80 @@ curl -X 'POST' \
 }
 ```
 
-#### 2. Query Financial News Sentiment: `GET /api/v1/stocks/{symbol}/sentiment`
-```json
-{
-  "symbol": "AAPL",
-  "summary": {
-    "total_articles": 8,
-    "average_polarity": 0.184,
-    "overall_sentiment": "Positive"
-  },
-  "articles": [
-    {
-      "title": "Apple Expands AI Integration Across Ecosystem",
-      "published_date": "Thu, 24 Sep 2026 14:30:00 GMT",
-      "sentiment": "Positive",
-      "polarity": 0.35
-    }
-  ]
-}
-```
-
-#### 3. Service Health Check: `GET /health`
-```json
-{
-  "status": "healthy",
-  "database": "Supabase PostgreSQL (postgres)",
-  "version": "2.0.0"
-}
-```
-
 ---
 
-## 🛠 Installation & Local Setup
+## Local Setup
 
-### 1. Clone the Repository
+### 1. Clone the repository
 ```bash
 git clone https://github.com/Askme007/MarketPulse.git
 cd MarketPulse
 ```
 
-### 2. Install Dependencies
+### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configure Database Credentials (Supabase PostgreSQL)
-1. Create a free project on [Supabase](https://supabase.com).
-2. Retrieve your **Connection Pooler** URI (**Session mode**, Port `6543`, IPv4 compatible):
-   ```env
-   DATABASE_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
-   ```
-3. Copy `.env.example` to `.env` and assign your connection string:
-   ```bash
-   cp .env.example .env
-   ```
-> *Zero-Config Fallback*: If `DATABASE_URL` is omitted, MarketPulse automatically initializes a local `stock_predictor.db` SQLite database with the identical schema.
+### 3. Configure environment variables (Optional)
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+
+If connecting to Supabase PostgreSQL, set `DATABASE_URL` in `.env`:
+```env
+DATABASE_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+```
+*If `DATABASE_URL` is omitted, the application defaults to local SQLite (`stock_predictor.db`).*
 
 ---
 
-## 🖥 Running Locally
+## Running the Application
 
-### Option A: Launch the FastAPI REST Server
+### Start the API Server
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
-* **Interactive Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
-* **Alternative Redoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+- Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
+- Health Check: [http://localhost:8000/health](http://localhost:8000/health)
 
-### Option B: Execute Terminal CLI Runner
+### Run the CLI Script
 ```bash
 python Stock_Prediction.py AAPL
-# Or test indices:
+# or with indices:
 python Stock_Prediction.py ^NSEI
 ```
 
-### Option C: Execute Automated Test Suite
+### Run Tests
 ```bash
 pytest
 ```
-*Executes all 12 unit and integration tests across endpoints, metrics, and sentiment pipelines.*
 
 ---
 
-## ☁️ Cloud Deployment Guide (Render / Railway)
+## Cloud Deployment (Render)
 
-This repository includes a production `Procfile` and `render.yaml` for zero-Docker cloud hosting:
+This repository includes a `Procfile` and `render.yaml` configured for Render web services:
 
-1. Push your repository to **GitHub**.
-2. On [Render](https://render.com), create a new **Web Service** connected to your repository.
-3. Configure the service:
-   * **Runtime**: `Python 3`
-   * **Build Command**: `pip install -r requirements.txt && python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')"`
-   * **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Under **Environment Variables**, provide your Supabase session pooler connection string:
-   * `DATABASE_URL`: `postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres`
-5. Click **Deploy**. The service will build in ~25 seconds and launch with automated HTTPS.
+1. Connect the GitHub repository in the Render dashboard.
+2. Configure settings:
+   - **Environment**: Python
+   - **Build Command**: `pip install -r requirements.txt && python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')"`
+   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+3. Add the `DATABASE_URL` environment variable pointing to your Supabase PostgreSQL pooler instance.
 
 ---
 
-## 👥 Engineering & Collaboration Breakdown
+## Contributors
 
-This project was developed through collaborative engineering:
-
-* **Ashkrit Rai ([@Askme007](https://github.com/Askme007))** — *Lead Software Development Engineer (SDE)*  
-  Engineered the FastAPI production backend, zero-allocation NumPy LSTM recurrent engine, database architecture with Supabase connection pooling, automated `pytest` suite, latency/timeout optimizations, and cloud deployment.
-* **Collaborators ([@NavdeepKakrod](https://github.com/NavdeepKakrod), [@Akabhi2311](https://github.com/Akabhi2311), [@Akcodet7](https://github.com/Akcodet7))** — *Data Science & Research*  
-  Exploratory financial data analysis, feature engineering experiments, sentiment lexicon research, and initial notebook prototyping.
+- **Ashkrit Rai** ([@Askme007](https://github.com/Askme007)) - Backend architecture, API design, database integration, test suite, and cloud deployment.
+- **Navdeep** ([@NavdeepKakrod](https://github.com/NavdeepKakrod)) - Data analysis and exploratory modeling.
+- **Abhishek Kumar** ([@Akabhi2311](https://github.com/Akabhi2311)) - Feature engineering and sentiment research.
+- **Aayush Kumar** ([@Akcodet7](https://github.com/Akcodet7)) - Model experimentation and evaluation.
 
 ---
 
-## 📄 License
+## License
+
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
